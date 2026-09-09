@@ -93,4 +93,21 @@ public class Sale : BaseEntity
         TotalAmount = Items.Where(i => !i.Cancelled).Sum(i => i.TotalAmount);
         UpdatedAt = DateTime.UtcNow;
     }
+
+    /// <summary>
+    /// Replaces all sale items and recalculates the total amount.
+    /// </summary>
+    /// <param name="items">The collection of products to include in the sale.</param>
+    public void ReplaceItems(IEnumerable<(Guid ProductId, string ProductName, int Quantity, decimal UnitPrice)> items)
+    {
+        if (Cancelled)
+            throw new DomainException("Cannot modify a cancelled sale");
+        Items.Clear();
+
+        foreach (var item in items)
+            Items.Add(SaleItem.Create(item.ProductId, item.ProductName, item.Quantity, item.UnitPrice));
+
+        TotalAmount = Items.Where(i => !i.Cancelled).Sum(i => i.TotalAmount);
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

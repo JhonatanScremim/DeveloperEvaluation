@@ -24,8 +24,15 @@ public interface ISaleRepository
     Task<Sale?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Retrieves a paginated list of sales matching the specified criteria
+    /// Updates an existing sale in the repository
     /// </summary>
+    /// <param name="sale">The sale to update</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    Task UpdateAsync(Sale sale, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves a paginated list of sales matching the specified criteria
+    /// </summary>  
     /// <param name="criteria">The filter, sorting, and pagination criteria</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The matching sales and the total number of records</returns>

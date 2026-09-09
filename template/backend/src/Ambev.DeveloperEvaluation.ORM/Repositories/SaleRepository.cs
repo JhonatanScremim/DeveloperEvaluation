@@ -45,6 +45,16 @@ public class SaleRepository : ISaleRepository
     }
 
     /// <summary>
+    /// Updates an existing sale in the database
+    /// </summary>
+    /// <param name="sale">The sale to update</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    public async Task UpdateAsync(Sale sale, CancellationToken cancellationToken = default)
+    {
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
     /// Retrieves a paginated list of sales matching the specified criteria
     /// </summary>
     /// <param name="criteria">The filter, sorting, and pagination criteria</param>
