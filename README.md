@@ -1,77 +1,78 @@
-# Developer Evaluation Project
+# Developer Evaluation — Sales API
 
-`READ CAREFULLY`
+API de vendas feita em cima do template Ambev (.NET 8 + DDD).  
+CRUD de sales, regras de desconto no domínio e eventos publicados no log (`SaleCreated`, `SaleModified`, `SaleCancelled`, `ItemCancelled`).
 
-## Use Case
-**You are a developer on the DeveloperStore team. Now we need to implement the API prototypes.**
+O código fica em `template/backend`.
 
-As we work with `DDD`, to reference entities from other domains, we use the `External Identities` pattern with denormalization of entity descriptions.
+## O que precisa
 
-Therefore, you will write an API (complete CRUD) that handles sales records. The API needs to be able to inform:
+- .NET 8 SDK
+- Docker (Postgres local e também pros testes de integração/funcionais com Testcontainers)
+- IDE à escolha (VS / Rider / VS Code)
 
-* Sale number
-* Date when the sale was made
-* Customer
-* Total sale amount
-* Branch where the sale was made
-* Products
-* Quantities
-* Unit prices
-* Discounts
-* Total amount for each item
-* Cancelled/Not Cancelled
+## Banco
 
-It's not mandatory, but it would be a differential to build code for publishing events of:
-* SaleCreated
-* SaleModified
-* SaleCancelled
-* ItemCancelled
+Eu usei Postgres na porta **5434**. A connection string está no `appsettings.json` da WebApi:
 
-If you write the code, **it's not required** to actually publish to any Message Broker. You can log a message in the application log or however you find most convenient.
+```
+Host=localhost;Port=5434;Database=DeveloperEvaluation;Username=postgres;Password=docker
+```
 
-### Business Rules
+Se a sua porta/usuário forem outros, só ajustar ali.
 
-* Purchases above 4 identical items have a 10% discount
-* Purchases between 10 and 20 identical items have a 20% discount
-* It's not possible to sell above 20 identical items
-* Purchases below 4 items cannot have a discount
+Migrations: tem a migration de Sales no projeto ORM. Na primeira subida, aplica com:
 
-These business rules define quantity-based discounting tiers and limitations:
+```bash
+cd template/backend
+dotnet ef database update --project src/Ambev.DeveloperEvaluation.ORM --startup-project src/Ambev.DeveloperEvaluation.WebApi
+```
 
-1. Discount Tiers:
-   - 4+ items: 10% discount
-   - 10-20 items: 20% discount
+(Se preferir, sobe o Postgres do `docker-compose.yml` e aponta a connection string pro container.)
 
-2. Restrictions:
-   - Maximum limit: 20 items per product
-   - No discounts allowed for quantities below 4 items
+## Rodar a API
 
-## Overview
-This section provides a high-level overview of the project and the various skills and competencies it aims to assess for developer candidates. 
+```bash
+cd template/backend
+dotnet run --project src/Ambev.DeveloperEvaluation.WebApi
+```
 
-See [Overview](/.doc/overview.md)
+Swagger sobe em Development. Endpoints principais:
 
-## Tech Stack
-This section lists the key technologies used in the project, including the backend, testing, frontend, and database components. 
+| Método | Rota | O que faz |
+|--------|------|-----------|
+| POST | `/api/sales` | cria |
+| GET | `/api/sales/{id}` | busca |
+| GET | `/api/sales` | lista (paginação/filtro) |
+| PUT | `/api/sales/{id}` | atualiza |
+| DELETE | `/api/sales/{id}` | cancela a venda |
+| DELETE | `/api/sales/{id}/item/{itemId}` | cancela um item |
 
-See [Tech Stack](/.doc/tech-stack.md)
+## Testes
 
-## Frameworks
-This section outlines the frameworks and libraries that are leveraged in the project to enhance development productivity and maintainability. 
+Docker precisa estar rodando pros Integration e Functional (Testcontainers sobe o Postgres sozinho).
 
-See [Frameworks](/.doc/frameworks.md)
+```bash
+cd template/backend
 
-<!-- 
-## API Structure
-This section includes links to the detailed documentation for the different API resources:
-- [API General](./docs/general-api.md)
-- [Products API](/.doc/products-api.md)
-- [Carts API](/.doc/carts-api.md)
-- [Users API](/.doc/users-api.md)
-- [Auth API](/.doc/auth-api.md)
--->
+dotnet test tests/Ambev.DeveloperEvaluation.Unit
+dotnet test tests/Ambev.DeveloperEvaluation.Integration
+dotnet test tests/Ambev.DeveloperEvaluation.Functional
+```
 
-## Project Structure
-This section describes the overall structure and organization of the project files and directories. 
+Ou tudo de uma vez na solution:
 
-See [Project Structure](/.doc/project-structure.md)
+```bash
+dotnet test Ambev.DeveloperEvaluation.sln
+```
+
+## Regras de desconto (resumo)
+
+- < 4 itens iguais: sem desconto  
+- 4 a 9: 10%  
+- 10 a 20: 20%  
+- acima de 20: não permite  
+
+## Docs do template
+
+Ainda valem os arquivos em [`.doc/`](.doc/) (overview, stack, etc.) se quiser o contexto original do desafio.
