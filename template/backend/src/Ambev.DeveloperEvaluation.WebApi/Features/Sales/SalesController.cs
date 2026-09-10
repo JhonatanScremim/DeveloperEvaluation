@@ -89,7 +89,7 @@ public class SalesController : BaseController
 
         var response = await _mediator.Send(new GetSaleCommand(request.Id), cancellationToken);
 
-        return Ok(new ApiResponseWithData<SaleResponse>
+        return new OkObjectResult(new ApiResponseWithData<SaleResponse>
         {
             Success = true,
             Message = "Sale retrieved successfully",
@@ -117,7 +117,7 @@ public class SalesController : BaseController
         var command = _mapper.Map<ListSalesCommand>(request);
         var response = await _mediator.Send(command, cancellationToken);
 
-        return Ok(new PaginatedResponse<SaleResponse>
+        return new OkObjectResult(new PaginatedResponse<SaleResponse>
         {
             Success = true,
             Message = "Sales retrieved successfully",
@@ -152,7 +152,7 @@ public class SalesController : BaseController
 
         var response = await _mediator.Send(command, cancellationToken);
 
-        return Ok(new ApiResponseWithData<SaleResponse>
+        return new OkObjectResult(new ApiResponseWithData<SaleResponse>
         {
             Success = true,
             Message = "Sale updated successfully",
@@ -181,7 +181,7 @@ public class SalesController : BaseController
 
         var response = await _mediator.Send(new CancelSaleCommand(request.Id), cancellationToken);
 
-        return Ok(new ApiResponseWithData<SaleResponse>
+        return new OkObjectResult(new ApiResponseWithData<SaleResponse>
         {
             Success = true,
             Message = "Sale cancelled successfully",
@@ -214,7 +214,7 @@ public class SalesController : BaseController
 
         var response = await _mediator.Send(new CancelSaleItemCommand(request.SaleId, request.ItemId), cancellationToken);
 
-        return Ok(new ApiResponseWithData<SaleResponse>
+        return new OkObjectResult(new ApiResponseWithData<SaleResponse>
         {
             Success = true,
             Message = "Sale item cancelled successfully",

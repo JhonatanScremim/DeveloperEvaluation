@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Ambev.DeveloperEvaluation.Functional.TestData;
+using Ambev.DeveloperEvaluation.WebApi.Common;
 using Ambev.DeveloperEvaluation.WebApi.Features.Sales.Common;
 using FluentAssertions;
 using Xunit;
@@ -43,9 +44,10 @@ public class SalesApiTests : IClassFixture<SalesWebApplicationFactory>
 
         // Then
         response.StatusCode.Should().Be(HttpStatusCode.Created);
-        var sale = await ReadSaleAsync(response);
-        sale.Id.Should().NotBe(Guid.Empty);
-        sale.Items.Should().ContainSingle(i => i.Product.Name == "Beer");
+        var body = await ReadAsync<ApiResponseWithData<SaleResponse>>(response);
+        body!.Data.Should().NotBeNull();
+        body.Data!.Id.Should().NotBe(Guid.Empty);
+        body.Data.Items.Should().ContainSingle(i => i.Product.Name == "Beer");
     }
 
     /// <summary>
@@ -62,9 +64,9 @@ public class SalesApiTests : IClassFixture<SalesWebApplicationFactory>
 
         // Then
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var sale = await ReadSaleAsync(response);
-        sale.Id.Should().Be(created.Id);
-        sale.SaleNumber.Should().Be(created.SaleNumber);
+        var body = await ReadAsync<ApiResponseWithData<SaleResponse>>(response);
+        body!.Data!.Id.Should().Be(created.Id);
+        body.Data.SaleNumber.Should().Be(created.SaleNumber);
     }
 
     /// <summary>
@@ -81,8 +83,8 @@ public class SalesApiTests : IClassFixture<SalesWebApplicationFactory>
 
         // Then
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var sales = await ReadSalesAsync(response);
-        sales.Should().Contain(s => s.Id == created.Id);
+        var body = await ReadAsync<SalesListBody>(response);
+        body!.Data.Should().Contain(s => s.Id == created.Id);
     }
 
     /// <summary>
@@ -100,9 +102,9 @@ public class SalesApiTests : IClassFixture<SalesWebApplicationFactory>
 
         // Then
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var sale = await ReadSaleAsync(response);
-        sale.Customer.Name.Should().Be("Jane Customer");
-        sale.Items.Should().ContainSingle(i => i.Product.Name == "Wine");
+        var body = await ReadAsync<ApiResponseWithData<SaleResponse>>(response);
+        body!.Data!.Customer.Name.Should().Be("Jane Customer");
+        body.Data.Items.Should().ContainSingle(i => i.Product.Name == "Wine");
     }
 
     /// <summary>
@@ -119,9 +121,9 @@ public class SalesApiTests : IClassFixture<SalesWebApplicationFactory>
 
         // Then
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var sale = await ReadSaleAsync(response);
-        sale.Cancelled.Should().BeTrue();
-        sale.TotalAmount.Should().Be(0m);
+        var body = await ReadAsync<ApiResponseWithData<SaleResponse>>(response);
+        body!.Data!.Cancelled.Should().BeTrue();
+        body.Data.TotalAmount.Should().Be(0m);
     }
 
     /// <summary>
@@ -139,10 +141,10 @@ public class SalesApiTests : IClassFixture<SalesWebApplicationFactory>
 
         // Then
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var sale = await ReadSaleAsync(response);
-        sale.Cancelled.Should().BeFalse();
-        sale.Items.Single(i => i.Id == beerId).Cancelled.Should().BeTrue();
-        sale.TotalAmount.Should().Be(20m);
+        var body = await ReadAsync<ApiResponseWithData<SaleResponse>>(response);
+        body!.Data!.Cancelled.Should().BeFalse();
+        body.Data.Items.Single(i => i.Id == beerId).Cancelled.Should().BeTrue();
+        body.Data.TotalAmount.Should().Be(20m);
     }
 
     /// <summary>
@@ -155,47 +157,28 @@ public class SalesApiTests : IClassFixture<SalesWebApplicationFactory>
         var request = SaleApiTestData.NewCreateRequest(itemCount: itemCount);
         var response = await _client.PostAsJsonAsync("/api/sales", request);
         response.EnsureSuccessStatusCode();
-        return await ReadSaleAsync(response);
+
+        var body = await ReadAsync<ApiResponseWithData<SaleResponse>>(response);
+        return body!.Data!;
     }
 
     /// <summary>
-    /// Reads the sale payload whether the API returned a single or double envelope
-    /// (Created vs Ok via BaseController).
+    /// Deserializes the HTTP response body.
     /// </summary>
+    /// <typeparam name="T">The response body type.</typeparam>
     /// <param name="response">The HTTP response message.</param>
-    /// <returns>The deserialized sale.</returns>
-    private static async Task<SaleResponse> ReadSaleAsync(HttpResponseMessage response)
+    /// <returns>The deserialized body.</returns>
+    private static async Task<T?> ReadAsync<T>(HttpResponseMessage response)
     {
-        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        var data = doc.RootElement.GetProperty("data");
-
-        if (data.ValueKind == JsonValueKind.Object &&
-            data.TryGetProperty("data", out var inner) &&
-            inner.ValueKind == JsonValueKind.Object)
-        {
-            return inner.Deserialize<SaleResponse>(JsonOptions)!;
-        }
-
-        return data.Deserialize<SaleResponse>(JsonOptions)!;
+        var json = await response.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<T>(json, JsonOptions);
     }
 
     /// <summary>
-    /// Reads the sales list payload whether the API returned a single or double envelope.
+    /// Response body used to deserialize the paginated sales list.
     /// </summary>
-    /// <param name="response">The HTTP response message.</param>
-    /// <returns>The deserialized sales list.</returns>
-    private static async Task<List<SaleResponse>> ReadSalesAsync(HttpResponseMessage response)
+    private sealed class SalesListBody
     {
-        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        var data = doc.RootElement.GetProperty("data");
-
-        if (data.ValueKind == JsonValueKind.Object &&
-            data.TryGetProperty("data", out var inner) &&
-            inner.ValueKind == JsonValueKind.Array)
-        {
-            return inner.Deserialize<List<SaleResponse>>(JsonOptions)!;
-        }
-
-        return data.Deserialize<List<SaleResponse>>(JsonOptions)!;
+        public List<SaleResponse>? Data { get; set; }
     }
 }
