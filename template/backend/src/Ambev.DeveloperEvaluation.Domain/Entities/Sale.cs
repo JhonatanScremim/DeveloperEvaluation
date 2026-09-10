@@ -110,4 +110,42 @@ public class Sale : BaseEntity
         TotalAmount = Items.Where(i => !i.Cancelled).Sum(i => i.TotalAmount);
         UpdatedAt = DateTime.UtcNow;
     }
+
+    /// <summary>
+    /// Cancels the sale and all of its non-cancelled items.
+    /// </summary>
+    public void Cancel()
+    {
+        if (Cancelled)
+            throw new DomainException("Sale is already cancelled");
+
+        Cancelled = true;
+
+        foreach (var item in Items.Where(i => !i.Cancelled))
+            item.Cancel();
+
+        TotalAmount = Items.Where(i => !i.Cancelled).Sum(i => i.TotalAmount);
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Cancels a specific item in the sale and recalculates the total amount.
+    /// </summary>
+    /// <param name="itemId">The unique identifier of the item to cancel.</param>
+    public void CancelItem(Guid itemId)
+    {
+        if (Cancelled)
+            throw new DomainException("Cannot modify a cancelled sale");
+
+        var item = Items.FirstOrDefault(i => i.Id == itemId)
+            ?? throw new DomainException($"Item {itemId} was not found in this sale");
+
+        item.Cancel();
+        TotalAmount = Items.Where(i => !i.Cancelled).Sum(i => i.TotalAmount);
+
+        if (Items.Count > 0 && Items.All(i => i.Cancelled))
+            Cancelled = true;
+
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

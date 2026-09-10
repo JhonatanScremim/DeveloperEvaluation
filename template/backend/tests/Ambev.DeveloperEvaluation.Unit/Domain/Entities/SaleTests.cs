@@ -109,4 +109,80 @@ public class SaleTests
         // Act & Assert
         Assert.Throws<DomainException>(() => sale.AddItem(Guid.NewGuid(), "Beer", 21, 10m));
     }
+
+    /// <summary>
+    /// Tests that cancelling a sale marks the sale and its items as cancelled.
+    /// </summary>
+    [Fact(DisplayName = "Cancelling a sale should mark the sale and items as cancelled")]
+    public void Given_ValidSale_When_Cancelled_Then_SaleAndItemsShouldBeCancelled()
+    {
+        // Arrange
+        var sale = SaleTestData.GenerateValidSale();
+        sale.AddItem(Guid.NewGuid(), "Beer", 2, 10m);
+
+        // Act
+        sale.Cancel();
+
+        // Assert
+        Assert.True(sale.Cancelled);
+        Assert.True(sale.Items[0].Cancelled);
+        Assert.Equal(0m, sale.TotalAmount);
+    }
+
+    /// <summary>
+    /// Tests that cancelling an already cancelled sale throws a domain exception.
+    /// </summary>
+    [Fact(DisplayName = "Cancelling an already cancelled sale should throw a domain exception")]
+    public void Given_CancelledSale_When_CancelledAgain_Then_ShouldThrowDomainException()
+    {
+        // Arrange
+        var sale = SaleTestData.GenerateValidSale();
+        sale.Cancel();
+
+        // Act & Assert
+        Assert.Throws<DomainException>(() => sale.Cancel());
+    }
+
+    /// <summary>
+    /// Tests that cancelling a sale item updates the item and the sale total.
+    /// </summary>
+    [Fact(DisplayName = "Cancelling a sale item should mark the item as cancelled and update the total")]
+    public void Given_SaleWithItems_When_ItemCancelled_Then_ItemShouldBeCancelledAndTotalUpdated()
+    {
+        // Arrange
+        var sale = SaleTestData.GenerateValidSale();
+        sale.AddItem(Guid.NewGuid(), "Beer", 2, 10m);
+        sale.AddItem(Guid.NewGuid(), "Cake", 1, 10m);
+        sale.Items[0].Id = Guid.NewGuid();
+        sale.Items[1].Id = Guid.NewGuid();
+
+        // Act
+        sale.CancelItem(sale.Items[0].Id);
+
+        // Assert
+        Assert.True(sale.Items[0].Cancelled);
+        Assert.False(sale.Items[1].Cancelled);
+        Assert.False(sale.Cancelled);
+        Assert.Equal(10m, sale.TotalAmount);
+    }
+
+    /// <summary>
+    /// Tests that cancelling the last remaining item also cancels the sale.
+    /// </summary>
+    [Fact(DisplayName = "Cancelling the last remaining item should cancel the sale")]
+    public void Given_SaleWithSingleItem_When_ItemCancelled_Then_SaleShouldBeCancelled()
+    {
+        // Arrange
+        var sale = SaleTestData.GenerateValidSale();
+        sale.AddItem(Guid.NewGuid(), "Beer", 2, 10m);
+        sale.Items[0].Id = Guid.NewGuid();
+
+        // Act
+        sale.CancelItem(sale.Items[0].Id);
+
+        // Assert
+        Assert.True(sale.Items[0].Cancelled);
+        Assert.True(sale.Cancelled);
+        Assert.Equal(0m, sale.TotalAmount);
+    }
 }
